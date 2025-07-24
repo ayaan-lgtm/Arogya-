@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arogya Mitra - Health Chatbot</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #e0f7f9;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    .container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 15px;
+      max-width: 600px;
+      margin: auto;
+    }
+    #chatbox {
+      flex: 1;
+      overflow-y: auto;
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .message {
+      margin: 8px 0;
+      padding: 10px;
+      border-radius: 8px;
+      max-width: 90%;
+    }
+    .user {
+      background: #d1f1ff;
+      align-self: flex-end;
+    }
+    .bot {
+      background: #b2ebf2;
+      align-self: flex-start;
+    }
+    #controls {
+      display: flex;
+      margin-top: 10px;
+      gap: 5px;
+    }
+    #userInput {
+      flex: 1;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #aaa;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px 15px;
+      border: none;
+      background: #00bcd4;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #bmiCalculator {
+      margin-top: 15px;
+      background: #f0f0f0;
+      padding: 10px;
+      border-radius: 10px;
+    }
+    #doctor {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 80px;
+      height: 80px;
+      background: url('https://cdn-icons-png.flaticon.com/512/3774/3774299.png') no-repeat center/contain;
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>Arogya Mitra 🤖</h2>
+  <div id="chatbox"></div>
+  <div id="controls">
+    <input type="text" id="userInput" placeholder="Ask your health question..." />
+    <button id="sendBtn">Send</button>
+    <button onclick="startListening()">🎤</button>
+  </div>
+  <div id="bmiCalculator">
+    <h4>🧮 BMI Calculator</h4>
+    <input type="number" id="weight" placeholder="Weight (kg)" />
+    <input type="number" id="height" placeholder="Height (cm)" />
+    <button onclick="calculateBMI()">Calculate BMI</button>
+  </div>
+</div>
+<div id="doctor"></div>
+<script>
+  const qaPairs = {
+    "what is covid": "COVID-19 is a respiratory illness caused by the coronavirus.",
+    "कोविड क्या है": "कोविड-19 एक श्वसन रोग है जो कोरोना वायरस से होता है।",
+    "symptoms of covid": "Common symptoms include fever, cough, fatigue, and loss of taste or smell.",
+    "कोविड के लक्षण": "बुखार, खांसी, थकान और स्वाद या गंध का न आना सामान्य लक्षण हैं।",
+    "how to reduce fever": "Take paracetamol, stay hydrated, and rest.",
+    "बुखार कैसे कम करें": "पैरासिटामोल लें, पानी पिएं और आराम करें।",
+    "what is malaria": "Malaria is a mosquito-borne disease caused by a parasite.",
+    "मलेरिया क्या है": "मलेरिया मच्छर से फैलने वाली एक परजीवी जनित बीमारी है।",
+    "home remedy for cough": "Honey with warm water and ginger helps relieve cough.",
+    "खांसी का घरेलू इलाज": "शहद और अदरक गर्म पानी के साथ खांसी में राहत देता है।",
+    "treatment for typhoid": "Typhoid is treated with antibiotics like ciprofloxacin.",
+    "टाइफाइड का इलाज": "टाइफाइड का इलाज एंटीबायोटिक्स से किया जाता है।",
+    "tips for healthy skin": "Stay hydrated, eat fruits, and avoid too much sun.",
+    "स्वस्थ त्वचा के लिए टिप्स": "पानी पिएं, फल खाएं और धूप से बचें।",
+    "what is diabetes": "Diabetes is a chronic condition that affects blood sugar levels.",
+    "डायबिटीज क्या है": "डायबिटीज एक दीर्घकालिक स्थिति है जो रक्त शर्करा को प्रभावित करती है।",
+    "symptoms of malaria": "Fever, chills, and sweating are common symptoms of malaria.",
+    "मलेरिया के लक्षण": "बुखार, ठंड लगना और पसीना आना मलेरिया के आम लक्षण हैं।",
+    "how to prevent dengue": "Use mosquito repellents and eliminate standing water.",
+    "डेंगू से कैसे बचें": "मच्छर भगाने वाले का उपयोग करें और रुका हुआ पानी हटाएं।",
+    "treatment of dengue": "Stay hydrated, rest, and consult a doctor for monitoring.",
+    "डेंगू का इलाज": "पानी पिएं, आराम करें और डॉक्टर से सलाह लें।",
+    "what is blood pressure": "Blood pressure is the force of blood against artery walls.",
+    "ब्लड प्रेशर क्या है": "ब्लड प्रेशर धमनियों की दीवारों पर रक्त का दबाव होता है।",
+    "how to treat constipation": "Drink water, eat fiber-rich food, and stay active.",
+    "कब्ज का इलाज": "अधिक पानी पिएं, रेशा युक्त भोजन लें और सक्रिय रहें।",
+    "how to treat cold": "Use steam inhalation and stay warm.",
+    "सर्दी का इलाज": "भाप लें और गर्म कपड़े पहनें।",
+    "causes of headache": "Stress, dehydration, and eye strain can cause headaches.",
+    "सिरदर्द के कारण": "तनाव, पानी की कमी और आंखों का तनाव सिरदर्द के कारण हो सकते हैं।",
+    "what is anemia": "Anemia is a condition where there is a lack of red blood cells.",
+    "एनीमिया क्या है": "एनीमिया एक स्थिति है जिसमें शरीर में लाल रक्त कोशिकाओं की कमी होती है।",
+    "how to improve immunity": "Eat citrus fruits, exercise regularly, and sleep well.",
+    "इम्युनिटी कैसे बढ़ाएं": "नींबू वाले फल खाएं, व्यायाम करें और अच्छी नींद लें।",
+    "benefits of yoga": "Yoga improves flexibility, strength, and mental health.",
+    "योग के फायदे": "योग लचीलापन, ताकत और मानसिक स्वास्थ्य को बेहतर करता है।",
+    "what is PCOS": "PCOS is a hormonal disorder affecting women of reproductive age.",
+    "पीसीओएस क्या है": "पीसीओएस एक हार्मोनल समस्या है जो महिलाओं को प्रभावित करती है।",
+    "how to treat acidity": "Eat on time, avoid spicy food, and take antacids.",
+    "एसिडिटी का इलाज": "समय पर खाएं, तीखा खाना टालें और ऐंटासिड लें।",
+    "how to gain weight": "Eat protein-rich food and increase calorie intake.",
+    "वजन कैसे बढ़ाएं": "प्रोटीन युक्त भोजन खाएं और कैलोरी बढ़ाएं।",
+    "how to lose weight": "Exercise daily, eat healthy, and avoid junk food.",
+    "वजन कैसे घटाएं": "नियमित व्यायाम करें, संतुलित आहार लें और जंक फूड से बचें"
+  };
+
+  function appendMessage(message, sender) {
+    const chatbox = document.getElementById("chatbox");
+    const msgDiv = document.createElement("div");
+    msgDiv.className = `message ${sender}`;
+    msgDiv.innerText = message;
+    chatbox.appendChild(msgDiv);
+    chatbox.scrollTop = chatbox.scrollHeight;
+  }
+
+  function speak(text) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = /[^\u0000-\u007F]+/.test(text) ? "hi-IN" : "en-IN";
+    speechSynthesis.speak(utterance);
+  }
+
+  function processInput(input) {
+    const query = input.toLowerCase().trim().replace(/[?.!]/g, "");
+    let answer = qaPairs[query] || "Sorry, I don't have information on that. Please try asking something else.";
+    appendMessage(answer, 'bot');
+    speak(answer);
+  }
+
+  function handleUserInput() {
+    const input = document.getElementById("userInput").value.trim();
+    if (!input) return;
+    appendMessage(input, 'user');
+    processInput(input);
+    document.getElementById("userInput").value = '';
+  }
+
+  document.getElementById("sendBtn").onclick = handleUserInput;
+
+  function startListening() {
+    let recognition;
+    if ('webkitSpeechRecognition' in window) {
+      recognition = new webkitSpeechRecognition();
+    } else if ('SpeechRecognition' in window) {
+      recognition = new SpeechRecognition();
+    }
+    if (recognition) {
+      recognition.continuous = false;
+      recognition.lang = 'en-IN';
+      recognition.interimResults = false;
+      recognition.onresult = function(event) {
+        const voiceInput = event.results[0][0].transcript;
+        document.getElementById("userInput").value = voiceInput;
+        handleUserInput();
+      };
+      recognition.onerror = function(event) {
+        console.error("Speech recognition error:", event.error);
+      };
+      recognition.start();
+    }
+  }
+
+  function calculateBMI() {
+    const weight = parseFloat(document.getElementById("weight").value);
+    const height = parseFloat(document.getElementById("height").value) / 100;
+    if (!weight || !height) return alert("Please enter both weight and height.");
+    const bmi = (weight / (height * height)).toFixed(2);
+    const result = bmi < 18.5 ? "Underweight" : bmi < 25 ? "Normal" : bmi < 30 ? "Overweight" : "Obese";
+    const message = `Your BMI is ${bmi} (${result})`;
+    appendMessage(message, 'bot');
+    speak(message);
+  }
+</script>
+</body>
+</html>
